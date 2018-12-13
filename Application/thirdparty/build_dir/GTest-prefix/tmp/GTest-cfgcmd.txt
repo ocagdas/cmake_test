@@ -1,0 +1,1 @@
+cmd='/usr/bin/cmake;-DCMAKE_INSTALL_PREFIX=/home/ocagdas/companies/tunstall/cmake_test/Application/thirdparty/googletest/libs/x86_64;-GUnix Makefiles;/home/ocagdas/companies/tunstall/cmake_test/Application/thirdparty/build_dir/GTest-prefix/src/GTest'

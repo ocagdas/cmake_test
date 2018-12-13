@@ -1,0 +1,66 @@
+include (proj_info.cmake)
+
+#cmake_policy(SET CMP0048 NEW)
+project(${CURRENT_PROJECT_NAME})
+cmake_minimum_required(VERSION ${${CURRENT_PROJECT_NAME}_MIN_CMAKE_VER} FATAL_ERROR)
+message(STATUS "project: ${CMAKE_PROJECT_NAME} @ ${PROJECT_VERSION}")
+
+include(ProcessorCount)
+ProcessorCount(HOST_PROC_COUNT)
+message(${CMAKE_HOST_SYSTEM_NAME}:${CMAKE_HOST_SYSTEM_PROCESSOR}:${HOST_PROC_COUNT})
+message(${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR})
+
+#CMAKE_DEPENDENT_OPTION(USE_FOO "Use Foo" ON "USE_BAR;NOT USE_ZOT" OFF)
+
+if (UNIX OR CYGWIN)
+	set(HOST_ALIAS nix)
+elseif (WIN)
+	set(HOST_ALIAS win)
+else()
+	unset(HOST_ALIAS)
+	message(FATAL_ERROR "unknown host: ${CMAKE_HOST_SYSTEM_NAME}")
+endif()
+message(STATUS "Host alias: " ${HOST_ALIAS})
+
+find_program(arm-gcc arm-linux-gnueabihf-gcc)
+find_path(header-file unistd.h)
+find_library(lib-file pthread)
+
+message("a: ${CMAKE_SYSROOT} : ${CMAKE_FIND_ROOT_PATH} : ${CMAKE_C_COMPILER} : ${arm-gcc} : ${header-file} : ${lib-file}")
+message("b: ${CMAKE_CXX_COMPILER}")
+message("c: ${CMAKE_LIBRARY_PATH} : ${CMAKE_INCLUDE_PATH}")
+
+
+if (${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIGS_ROOT_DIR)
+	if (EXISTS ${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIGS_ROOT_DIR})
+		message(STATUS "Found host configs root: ${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIGS_ROOT_DIR}")
+		set(${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIG_PATH "${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIGS_ROOT_DIR}/host_${HOST_ALIAS}")
+
+		if (EXISTS ${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIG_PATH})
+			message(STATUS "Found host config path: ${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIG_PATH}")
+			file(GLOB ${CURRENT_PROJECT_NAME}_PLATFORM_CMAKE_FILES "${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIG_PATH}/${PLATFORM_CMAKE_FILE_PREFIX}*${PLATFORM_CMAKE_FILE_SUFFIX}")
+
+			foreach(CURRENT_PLATFORM_CMAKE_FILE_FULL_NAME ${${CURRENT_PROJECT_NAME}_PLATFORM_CMAKE_FILES})
+				get_filename_component(CURRENT_PLATFORM_CMAKE_FILE_NAME "${CURRENT_PLATFORM_CMAKE_FILE_FULL_NAME}" NAME)
+				string(REGEX REPLACE "^${PLATFORM_CMAKE_FILE_PREFIX}(.*)${PLATFORM_CMAKE_FILE_SUFFIX}$" "\\1" CURRENT_PL_NAME "${CURRENT_PLATFORM_CMAKE_FILE_NAME}")
+				list(APPEND ${CURRENT_PROJECT_NAME}_PLATFORM_NAMES "${CURRENT_PL_NAME}")
+			endforeach()
+			message(STATUS "Identified target platforms: ${${CURRENT_PROJECT_NAME}_PLATFORM_NAMES}")
+			list(GET ${CURRENT_PROJECT_NAME}_PLATFORM_NAMES 0 DEF_PL)
+			set(${CURRENT_PROJECT_NAME}_TARGET_PLATFORM "${DEF_PL}" CACHE STRING "target platform name")
+			set_property(CACHE ${CURRENT_PROJECT_NAME}_TARGET_PLATFORM PROPERTY STRINGS ${${CURRENT_PROJECT_NAME}_PLATFORM_NAMES})
+		else()
+			message(FATAL_ERROR "cannot host config path: ${${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIG_PATH}")
+		endif()
+	else()
+		message(FATAL_ERROR "Unknown targets dir: ${${CURRENT_PROJECT_NAME}_CMAKE_TARGET_PLATFORMS_DIR}")
+	endif()
+else()
+	set(${CURRENT_PROJECT_NAME}_TARGET_PLATFORM "${HOST_ALIAS}" CACHE STRING "target platform name")
+	message(STATUS "${CURRENT_PROJECT_NAME}_CMAKE_HOST_CONFIGS_ROOT_DIR is not set. assuming native build for ${${CURRENT_PROJECT_NAME}_TARGET_PLATFORM}")
+endif()
+
+add_executable(thread-ex thread-ex.c)
+target_link_libraries (thread-ex pthread)
+
+#option(BUILD_TARGET)
